@@ -1,0 +1,8 @@
+[package]
+authors = ["Mikkel Kroman <mk@maero.dk>"]
+name = "zke-ebd"
+version = "0.1.0"
+
+[dependencies]
+quick-error = "1.2.0"
+serial = "0.4.0"
