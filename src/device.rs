@@ -2,13 +2,15 @@ use std::io::{Write, Read};
 use std::ffi::OsStr;
 use serial::{SerialPort, BaudRate};
 use super::error::Error;
+use std::marker::PhantomData;
 
 pub const INIT_SEQUENCE: [u8; 10] = [0xfa, 0x05, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x05, 0xf8];
 const EBD_START_BYTE: u8 = 0xfa;
 const EBD_STOP_BYTE: u8 = 0xf8;
 
-pub struct Device {
+pub struct Device<D> {
   port: ::serial::SystemPort,
+  phantom: PhantomData<D>
 }
 
 pub trait EbdDevice {
@@ -67,6 +69,14 @@ fn generate_checksum(data: &[u8]) -> u8 {
   data.iter().fold(0u8, |acc, b| acc ^ b)
 }
 
+
+fn decode_current(buf: &[u8], current_divider: u16) -> f64 {
+  let b1 = buf[0] as i32;
+  let b2 = buf[1] as i32;
+
+  (((b1 * 256 + b2) - (b1 * 256 + b2) / 256 * 16) as f64 / current_divider as f64) as f64
+}
+
 fn decode_voltage(buf: &[u8]) -> f64 {
   let b1 = buf[0] as i32;
   let b2 = buf[1] as i32;
@@ -77,13 +87,6 @@ fn decode_voltage(buf: &[u8]) -> f64 {
   voltage
 }
 
-fn decode_current(buf: &[u8]) -> f64 {
-  let b1 = buf[0] as i32;
-  let b2 = buf[1] as i32;
-
-  (((b1 * 256 + b2) - (b1 * 256 + b2) / 256 * 16) as f64 / 10_000.) as f64
-}
-
 #[derive(Debug)]
 pub struct Measurement {
   pub voltage: f64,
@@ -91,7 +94,7 @@ pub struct Measurement {
 }
 
 impl Measurement {
-  pub fn parse(buf: &[u8; 19]) -> Result<Measurement, Error> {
+  pub fn parse(buf: &[u8; 19], current_divider: u16) -> Result<Measurement, Error> {
     let checksum = generate_checksum(&buf[1..17]);
 
     if buf[17] != checksum {
@@ -99,7 +102,7 @@ impl Measurement {
     }
 
     let voltage = decode_voltage(&buf[4..6]);
-    let current = decode_current(&buf[2..4]);
+    let current = decode_current(&buf[2..4], current_divider);
 
     Ok(Measurement {
       voltage: voltage,
@@ -108,8 +111,8 @@ impl Measurement {
   }
 }
 
-impl Device {
-  pub fn open<T: AsRef<OsStr> + ?Sized, D: EbdDevice>(port: &T) -> Result<Device, Error> {
+impl<D: EbdDevice> Device<D> {
+  pub fn open<T: AsRef<OsStr> + ?Sized>(port: &T) -> Result<Device<D>, Error> {
     let mut serial_port = ::serial::open(port)?;
 
     serial_port.reconfigure(&|ref mut settings| {
@@ -122,7 +125,8 @@ impl Device {
     serial_port.set_timeout(::std::time::Duration::from_millis(2500))?;
 
     Ok(Device {
-      port: serial_port
+      port: serial_port,
+      phantom: PhantomData
     })
   }
 
@@ -140,7 +144,7 @@ impl Device {
         return Err(Error::InvalidStopByte);
       }
 
-      match Measurement::parse(&buf) {
+      match Measurement::parse(&buf, D::CURRENT_DIVIDER) {
         Ok(measurement) => func(measurement),
         Err(e) => {
           println!("Error when reading measurement: {} - buf: {:?}", e, &buf);
@@ -148,4 +152,5 @@ impl Device {
       }
     }
   }
+
 }
