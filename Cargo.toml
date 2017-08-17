@@ -4,5 +4,6 @@ name = "zke-ebd"
 version = "0.1.0"
 
 [dependencies]
+clap = "2.26.0"
 quick-error = "1.2.0"
 serial = "0.4.0"

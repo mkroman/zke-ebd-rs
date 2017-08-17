@@ -63,7 +63,6 @@ impl EbdDevice for EbdUsbPlusPlus {
   const PACKET_SIZE: usize = 19;
 }
 
-
 fn generate_checksum(data: &[u8]) -> u8 {
   data.iter().fold(0u8, |acc, b| acc ^ b)
 }
@@ -82,7 +81,7 @@ fn decode_current(buf: &[u8]) -> f64 {
   let b1 = buf[0] as i32;
   let b2 = buf[1] as i32;
 
-  (((b1 * 256 + b2) - (b1 * 256 + b2) / 256 * 16) as f64 / 10000.) as f64
+  (((b1 * 256 + b2) - (b1 * 256 + b2) / 256 * 16) as f64 / 10_000.) as f64
 }
 
 #[derive(Debug)]
@@ -120,7 +119,7 @@ impl Device {
     })?;
 
     serial_port.write(&INIT_SEQUENCE)?;
-    serial_port.set_timeout(::std::time::Duration::from_secs(3))?;
+    serial_port.set_timeout(::std::time::Duration::from_millis(2500))?;
 
     Ok(Device {
       port: serial_port
