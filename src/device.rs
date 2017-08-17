@@ -1,8 +1,6 @@
 use std::io::{Write, Read};
 use std::ffi::OsStr;
-use serial;
-use serial::{SerialPortSettings};
-use serial::core::{SerialDevice, BaudRate};
+use serial::{SerialPort, BaudRate};
 use super::error::Error;
 
 pub const INIT_SEQUENCE: [u8; 10] = [0xfa, 0x05, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x05, 0xf8];
@@ -10,7 +8,7 @@ const EBD_START_BYTE: u8 = 0xfa;
 const EBD_STOP_BYTE: u8 = 0xf8;
 
 pub struct Device {
-  port: serial::SystemPort,
+  port: ::serial::SystemPort,
 }
 
 pub trait EbdDevice {
@@ -67,13 +65,7 @@ impl EbdDevice for EbdUsbPlusPlus {
 
 
 fn generate_checksum(data: &[u8]) -> u8 {
-  let mut result: u8 = 0;
-
-  for b in data.iter() {
-    result ^= *b;
-  }
-
-  result
+  data.iter().fold(0u8, |acc, b| acc ^ b)
 }
 
 fn decode_voltage(buf: &[u8]) -> f64 {
@@ -119,11 +111,13 @@ impl Measurement {
 
 impl Device {
   pub fn open<T: AsRef<OsStr> + ?Sized, D: EbdDevice>(port: &T) -> Result<Device, Error> {
-    let mut serial_port = serial::open(port)?;
+    let mut serial_port = ::serial::open(port)?;
 
-    let mut serial_settings = serial_port.read_settings()?;
-    serial_settings.set_baud_rate(BaudRate::Baud9600)?;
-    serial_port.write_settings(&serial_settings)?;
+    serial_port.reconfigure(&|ref mut settings| {
+      settings.set_baud_rate(BaudRate::Baud9600)?;
+
+      Ok(())
+    })?;
 
     serial_port.write(&INIT_SEQUENCE)?;
     serial_port.set_timeout(::std::time::Duration::from_secs(3))?;
