@@ -2,6 +2,7 @@ use std::io::{Write, Read};
 use std::ffi::OsStr;
 use serial::{SerialPort, BaudRate};
 use super::error::Error;
+use super::EbdDevice;
 use std::marker::PhantomData;
 
 pub const INIT_SEQUENCE: [u8; 10] = [0xfa, 0x05, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x05, 0xf8];
@@ -13,62 +14,9 @@ pub struct Device<D> {
   phantom: PhantomData<D>
 }
 
-pub trait EbdDevice {
-  const CURRENT_DIVIDER: u16;
-  const MAX_CURRENT: u32;
-  const MAX_POWER: u32;
-  const DEVICE_NAME: &'static str;
-  const PACKET_SIZE: usize;
-}
-
-// EBD-USB V1
-pub struct EbdUsbV1;
-
-impl EbdDevice for EbdUsbV1 {
-  const CURRENT_DIVIDER: u16 = 1000;
-  const MAX_CURRENT: u32 = 3000;
-  const MAX_POWER: u32 = 24000;
-  const DEVICE_NAME: &'static str = "EBD-USB V1";
-  const PACKET_SIZE: usize = 19;
-}
-
-// EBD-USB V2
-pub struct EbdUsbV2;
-
-impl EbdDevice for EbdUsbV2 {
-  const CURRENT_DIVIDER: u16 = 1000;
-  const MAX_CURRENT: u32 = 3000;
-  const MAX_POWER: u32 = 24000;
-  const DEVICE_NAME: &'static str = "EBD-USB V2";
-  const PACKET_SIZE: usize = 19;
-}
-
-// EBD-USB Plus
-pub struct EbdUsbPlus;
-
-impl EbdDevice for EbdUsbPlus {
-  const CURRENT_DIVIDER: u16 = 10000;
-  const MAX_CURRENT: u32 = 5000;
-  const MAX_POWER: u32 = 50000;
-  const DEVICE_NAME: &'static str = "EBD-USB Plus";
-  const PACKET_SIZE: usize = 19;
-}
-
-// EBD-USB Plus+
-pub struct EbdUsbPlusPlus;
-
-impl EbdDevice for EbdUsbPlusPlus {
-  const CURRENT_DIVIDER: u16 = 5000;
-  const MAX_CURRENT: u32 = 5000;
-  const MAX_POWER: u32 = 50000;
-  const DEVICE_NAME: &'static str = "EBD-USB Plus+";
-  const PACKET_SIZE: usize = 19;
-}
-
 fn generate_checksum(data: &[u8]) -> u8 {
   data.iter().fold(0u8, |acc, b| acc ^ b)
 }
-
 
 fn decode_current(buf: &[u8], current_divider: u16) -> f64 {
   let b1 = buf[0] as i32;
@@ -144,7 +92,7 @@ impl<D: EbdDevice> Device<D> {
         return Err(Error::InvalidStopByte);
       }
 
-      match Measurement::parse(&buf, D::CURRENT_DIVIDER) {
+      match Measurement::parse(&buf, D::current_divider()) {
         Ok(measurement) => func(measurement),
         Err(e) => {
           println!("Error when reading measurement: {} - buf: {:?}", e, &buf);

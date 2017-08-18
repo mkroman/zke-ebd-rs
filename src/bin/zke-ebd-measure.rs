@@ -25,7 +25,7 @@ fn try_main() -> Result<(), zke_ebd::error::Error> {
                     .default_value(DEFAULT_DEVICE))
                   .get_matches();
   let device_arg = matches.value_of_os("device").unwrap();
-  let mut device: Device<zke_ebd::device::EbdUsbPlus> = Device::open(device_arg)?;
+  let mut device: Device<zke_ebd::devices::EbdUsbPlus> = Device::open(device_arg)?;
 
   device.monitor(|measurement| {
     println!("{:?}", measurement);
