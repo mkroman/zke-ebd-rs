@@ -2,16 +2,15 @@ use std::io::{Write, Read};
 use std::ffi::OsStr;
 use serial::{SerialPort, BaudRate};
 use super::error::Error;
-use super::EbdDevice;
-use std::marker::PhantomData;
+use super::devices::DeviceDescriptor;
 
-pub const INIT_SEQUENCE: [u8; 10] = [0xfa, 0x05, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x05, 0xf8];
+const INIT_SEQUENCE: [u8; 10] = [0xfa, 0x05, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x05, 0xf8];
 const EBD_START_BYTE: u8 = 0xfa;
 const EBD_STOP_BYTE: u8 = 0xf8;
 
-pub struct Device<D> {
+pub struct Device {
   port: ::serial::SystemPort,
-  phantom: PhantomData<D>
+  device: DeviceDescriptor,
 }
 
 fn generate_checksum(data: &[u8]) -> u8 {
@@ -39,6 +38,7 @@ fn decode_voltage(buf: &[u8]) -> f64 {
 pub struct Measurement {
   pub voltage: f64,
   pub current: f64,
+  pub checksum: u8,
 }
 
 impl Measurement {
@@ -54,13 +54,14 @@ impl Measurement {
 
     Ok(Measurement {
       voltage: voltage,
-      current: current
+      current: current,
+      checksum: buf[17],
     })
   }
 }
 
-impl<D: EbdDevice> Device<D> {
-  pub fn open<T: AsRef<OsStr> + ?Sized>(port: &T) -> Result<Device<D>, Error> {
+impl Device {
+  pub fn open<T: AsRef<OsStr> + ?Sized>(port: &T, device: DeviceDescriptor) -> Result<Device, Error> {
     let mut serial_port = ::serial::open(port)?;
 
     serial_port.reconfigure(&|ref mut settings| {
@@ -74,7 +75,7 @@ impl<D: EbdDevice> Device<D> {
 
     Ok(Device {
       port: serial_port,
-      phantom: PhantomData
+      device: device,
     })
   }
 
@@ -92,7 +93,7 @@ impl<D: EbdDevice> Device<D> {
         return Err(Error::InvalidStopByte);
       }
 
-      match Measurement::parse(&buf, D::current_divider()) {
+      match Measurement::parse(&buf, self.device.current_divider) {
         Ok(measurement) => func(measurement),
         Err(e) => {
           println!("Error when reading measurement: {} - buf: {:?}", e, &buf);
@@ -100,5 +101,4 @@ impl<D: EbdDevice> Device<D> {
       }
     }
   }
-
 }

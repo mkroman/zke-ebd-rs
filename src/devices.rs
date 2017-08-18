@@ -1,85 +1,39 @@
-use super::EbdDevice;
-
-// EBD-USB V1
-pub struct EbdUsbV1;
-
-impl EbdDevice for EbdUsbV1 {
-  fn current_divider() -> u16 {
-    1000
-  }
-
-  fn max_current() -> u32 {
-    3000
-  }
-
-  fn max_power() -> u32 {
-    24000
-  }
-
-  fn device_name() -> &'static str {
-    "EDB-USB V1"
-  }
+#[derive(Debug, Clone)]
+pub struct DeviceDescriptor {
+  pub name: &'static str,
+  pub current_divider: u16,
+  pub max_current: u32,
+  pub max_power: u32,
 }
 
-// EBD-USB V2
-pub struct EbdUsbV2;
+#[allow(dead_code)]
+pub const EBD_USB_V1: DeviceDescriptor = DeviceDescriptor {
+  name: "EBD-USB V1",
+  current_divider: 1000,
+  max_current: 3000,
+  max_power: 24_000,
+};
 
-impl EbdDevice for EbdUsbV2 {
-  fn current_divider() -> u16 {
-    1000
-  }
+#[allow(dead_code)]
+pub static EBD_USB_V2: DeviceDescriptor = DeviceDescriptor {
+  name: "EBD-USB V2",
+  current_divider: 1000,
+  max_current: 3000,
+  max_power: 24_000,
+};
 
-  fn max_current() -> u32 {
-    3000
-  }
+#[allow(dead_code)]
+pub const EBD_USB_PLUS: DeviceDescriptor = DeviceDescriptor {
+  name: "EBD-USB Plus",
+  current_divider: 10_000,
+  max_current: 5000,
+  max_power: 50_000,
+};
 
-  fn max_power() -> u32 {
-    24000
-  }
-
-  fn device_name() -> &'static str {
-    "EDB-USB V2"
-  }
-}
-
-// EBD-USB Plus
-pub struct EbdUsbPlus;
-
-impl EbdDevice for EbdUsbPlus {
-  fn current_divider() -> u16 {
-    10000
-  }
-
-  fn max_current() -> u32 {
-    5000
-  }
-
-  fn max_power() -> u32 {
-    50000
-  }
-
-  fn device_name() -> &'static str {
-    "EDB-USB Plus"
-  }
-}
-
-// EBD-USB Plus+
-pub struct EbdUsbPlusPlus;
-
-impl EbdDevice for EbdUsbPlusPlus {
-  fn current_divider() -> u16 {
-    5000
-  }
-
-  fn max_current() -> u32 {
-    5000
-  }
-
-  fn max_power() -> u32 {
-    50000
-  }
-
-  fn device_name() -> &'static str {
-    "EDB-USB Plus+"
-  }
-}
+#[allow(dead_code)]
+pub static EBD_USB_PLUS_PLUS: DeviceDescriptor = DeviceDescriptor {
+  name: "EBD-USB Plus+",
+  current_divider: 5000,
+  max_current: 5000,
+  max_power: 50_000,
+};
