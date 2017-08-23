@@ -1,3 +1,4 @@
+/// Device descriptors that contain information for specific devices.
 #[derive(Debug, Clone)]
 pub struct DeviceDescriptor {
   pub name: &'static str,
@@ -6,14 +7,16 @@ pub struct DeviceDescriptor {
   pub max_power: u32,
 }
 
+/// EDB-USB V1
 #[allow(dead_code)]
-pub const EBD_USB_V1: DeviceDescriptor = DeviceDescriptor {
+pub static EBD_USB_V1: DeviceDescriptor = DeviceDescriptor {
   name: "EBD-USB V1",
   current_divider: 1000,
   max_current: 3000,
   max_power: 24_000,
 };
 
+/// EDB-USB V2
 #[allow(dead_code)]
 pub static EBD_USB_V2: DeviceDescriptor = DeviceDescriptor {
   name: "EBD-USB V2",
@@ -22,14 +25,16 @@ pub static EBD_USB_V2: DeviceDescriptor = DeviceDescriptor {
   max_power: 24_000,
 };
 
+/// EBD-USB Plus
 #[allow(dead_code)]
-pub const EBD_USB_PLUS: DeviceDescriptor = DeviceDescriptor {
+pub static EBD_USB_PLUS: DeviceDescriptor = DeviceDescriptor {
   name: "EBD-USB Plus",
   current_divider: 10_000,
   max_current: 5000,
   max_power: 50_000,
 };
 
+/// EBD-USB Plus+
 #[allow(dead_code)]
 pub static EBD_USB_PLUS_PLUS: DeviceDescriptor = DeviceDescriptor {
   name: "EBD-USB Plus+",

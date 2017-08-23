@@ -8,15 +8,18 @@ const INIT_SEQUENCE: [u8; 10] = [0xfa, 0x05, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 const EBD_START_BYTE: u8 = 0xfa;
 const EBD_STOP_BYTE: u8 = 0xf8;
 
+/// Device handle.
 pub struct Device {
   port: ::serial::SystemPort,
   device: DeviceDescriptor,
 }
 
+/// Generates a checksum byte for the passed `data`.
 fn generate_checksum(data: &[u8]) -> u8 {
   data.iter().fold(0u8, |acc, b| acc ^ b)
 }
 
+/// Decodes the bytes passed as `buf` as a current, divided by the device-specific `current_divider`.
 fn decode_current(buf: &[u8], current_divider: u16) -> f64 {
   let b1 = buf[0] as i32;
   let b2 = buf[1] as i32;
@@ -24,6 +27,7 @@ fn decode_current(buf: &[u8], current_divider: u16) -> f64 {
   (((b1 * 256 + b2) - (b1 * 256 + b2) / 256 * 16) as f64 / current_divider as f64) as f64
 }
 
+/// Decodes the bytes passed as `buf` as a voltage.
 fn decode_voltage(buf: &[u8]) -> f64 {
   let b1 = buf[0] as i32;
   let b2 = buf[1] as i32;
@@ -34,14 +38,22 @@ fn decode_voltage(buf: &[u8]) -> f64 {
   voltage
 }
 
+/// Measurement values.
 #[derive(Debug)]
 pub struct Measurement {
+  /// The voltage in mV.
   pub voltage: f64,
+  /// The current in mAh.
   pub current: f64,
+  /// The checksum byte.
   pub checksum: u8,
 }
 
 impl Measurement {
+  /// Parses the given `buf` as a measurement packet.
+  /// 
+  /// # Arguments
+  /// * `current_divider` - device-specific current divider value.
   pub fn parse(buf: &[u8; 19], current_divider: u16) -> Result<Measurement, Error> {
     let checksum = generate_checksum(&buf[1..17]);
 
@@ -61,6 +73,7 @@ impl Measurement {
 }
 
 impl Device {
+  /// Opens a serial connection device on the specified `port` and initiates monitoring.
   pub fn open<T: AsRef<OsStr> + ?Sized>(port: &T, device: DeviceDescriptor) -> Result<Device, Error> {
     let mut serial_port = ::serial::open(port)?;
 
@@ -79,6 +92,19 @@ impl Device {
     })
   }
 
+  /// Starts monitoring the device, calling `func` with each successful measurement read from the
+  /// device. The interval between each measurement depends on the device.
+  /// 
+  /// This is a blocking operation.
+  /// 
+  /// # Arguments
+  /// 
+  /// * `func` - the callback function to handle measurements.
+  /// 
+  /// # Return value
+  /// 
+  /// When the device sends an illegaly structured packet, the function returns
+  /// `Error::InvalidStartByte` or `Error::InvalidStopByte`
   pub fn monitor<F: Fn(Measurement)>(&mut self, func: F) -> Result<(), Error> {
     let mut buf: [u8; 19] = [0; 19];
 
